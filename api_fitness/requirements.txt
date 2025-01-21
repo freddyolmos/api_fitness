@@ -1,0 +1,10 @@
+asgiref==3.8.1
+Django==5.1.5
+sqlparse==0.5.3
+
+# PostgreSQL driver para Django
+psycopg2-binary==2.9.6
+
+# Herramientas útiles para desarrollo
+django-environ==0.10.0  # Manejo de variables de entorno
+djangorestframework==3.15.0  # Django REST Framework si estás desarrollando una API
