@@ -2,7 +2,7 @@ from django.db import models
 
 class Food(models.Model):
     name = models.CharField(max_length=100)
-    cuantity = models.FloatField()
+    quantity = models.FloatField()
     unit_measurement = models.CharField(max_length=20)
     proteins = models.FloatField()
     fats = models.FloatField()
@@ -13,22 +13,54 @@ class Food(models.Model):
         return self.name
     
 class Meal(models.Model):
-    name = models.CharField(max_length=100)  # Ej: "Desayuno", "Colación 1"
-    foods = models.ManyToManyField(Food, related_name="meals")
+    name = models.CharField(max_length=100)  # Ex: "Breakfast", "Snack 1"
+    items = models.ManyToManyField(Food, through='MealItem', related_name='meals')  # Relación con el modelo intermedio
     total_proteins = models.FloatField(default=0)
     total_fats = models.FloatField(default=0)
     total_carbohydrates = models.FloatField(default=0)
     total_calories = models.FloatField(default=0)
 
     def save(self, *args, **kwargs):
-        self.total_proteins = sum(food.proteins for food in self.foods.all())
-        self.total_fats = sum(food.fats for food in self.foods.all())
-        self.total_carbohydrates = sum(food.carbohydrates for food in self.foods.all())
-        self.total_calories = sum(food.calories for food in self.foods.all())
+        # Guarda la instancia si es nueva para obtener un ID
+        if not self.pk:
+            super().save(*args, **kwargs)
+
+        # Calcula los totales basados en los items
+        self.total_proteins = sum(item.total_proteins for item in self.meal_items.all())
+        self.total_fats = sum(item.total_fats for item in self.meal_items.all())
+        self.total_carbohydrates = sum(item.total_carbohydrates for item in self.meal_items.all())
+        self.total_calories = sum(item.total_calories for item in self.meal_items.all())
+
+        # Guarda nuevamente con los valores actualizados
         super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
+
+class MealItem(models.Model):
+    food = models.ForeignKey(Food, on_delete=models.CASCADE)  # Relación con Food
+    meal = models.ForeignKey(Meal, on_delete=models.CASCADE, related_name='meal_items')  # Relación con Meal
+    quantity = models.FloatField()  # Cantidad personalizada
+
+    # Propiedades calculadas
+    @property
+    def total_proteins(self):
+        return self.quantity * (self.food.proteins )
+
+    @property
+    def total_fats(self):
+        return self.quantity * (self.food.fats)
+
+    @property
+    def total_carbohydrates(self):
+        return self.quantity * (self.food.carbohydrates)
+
+    @property
+    def total_calories(self):
+        return self.quantity * (self.food.calories)
+
+    def __str__(self):
+        return f"{self.quantity} {self.food.unit_measurement} of {self.food.name} in {self.meal.name}"
 
 class DailyDiet(models.Model):
     date = models.DateField()
